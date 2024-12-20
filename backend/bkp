@@ -1,0 +1,82 @@
+from flask import Flask, request, jsonify
+import openai
+
+# Initialize the Flask app
+app = Flask(__name__)
+
+# Set your OpenAI API key
+openai.api_key = "your-api-key"
+
+# Global progress tracker
+progress = {
+    "status": "Initializing",
+    "details": []
+}
+
+@app.route('/status', methods=['GET'])
+def status():
+    """
+    Endpoint to get the current progress status.
+    """
+    return jsonify(progress)
+
+
+@app.route('/process', methods=['POST'])
+def process():
+    """
+    Endpoint to process a user's prompt using OpenAI's ChatCompletion API.
+    """
+    global progress
+    data = request.json
+    prompt = data.get('prompt', '')
+
+    try:
+        # Update progress
+        progress["status"] = "Processing"
+        progress["details"].append(f"Received prompt: {prompt}")
+
+        client = openai.OpenAI(
+            api_key="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",  # This is the default and can be omitted
+        )
+        # OpenAI API call
+        response = client.chat.completions.create(
+            model="gpt-4",  # or "gpt-3.5-turbo"
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=150,
+            temperature=0.7
+        )
+
+        # Extract response content using dot notation
+        response_text = response.choices[0].message.content.strip()
+
+        # Update progress with completion
+        progress["status"] = "Completed"
+        progress["details"].append("Task completed successfully")
+
+        # Return the response text
+        return jsonify({"response": response_text})
+    except Exception as e:
+        # Handle any errors and update progress
+        progress["status"] = "Error"
+        progress["details"].append(f"Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/reset', methods=['POST'])
+def reset():
+    """
+    Endpoint to reset the progress tracker.
+    """
+    global progress
+    progress = {
+        "status": "Initializing",
+        "details": []
+    }
+    return jsonify({"message": "Progress reset successfully"})
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

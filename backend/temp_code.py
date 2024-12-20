@@ -1,0 +1,1 @@
+Test the overall functionality of the app
